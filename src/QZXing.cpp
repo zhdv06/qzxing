@@ -467,15 +467,22 @@ QString QZXing::decodeImage(const QImage &image, int maxWidth, int maxHeight, bo
             }
 
             lastDecodeOperationSucceded_ = false;
-            try {
-                //qDebug() << "Decoding phase 1: started";
-                res = decoder->decode(bb, hints);
+            // try {
+            res = decoder->decode(bb, hints);
+#ifdef Q_OS_WASM
+            if (!res.isNull()) {
+#endif
                 processingTime = t.elapsed();
                 lastDecodeOperationSucceded_ = true;
                 break;
-            } catch(zxing::Exception &/*e*/){
-                //qDebug() << "Decoding phase 1: failed";
+#ifdef Q_OS_WASM
+            } else {
+                lastDecodeOperationSucceded_ = false;
             }
+#endif
+            // } catch(zxing::Exception &e){
+            //     qDebug() << "Decoding phase 1: failed";
+            // }
 
             if(!lastDecodeOperationSucceded_ && tryHarder_ && (tryHarderType & TryHarderBehaviour_ThoroughScanning))
             {
@@ -486,14 +493,22 @@ QString QZXing::decodeImage(const QImage &image, int maxWidth, int maxHeight, bo
                         !(hints & DecodeHints::PRODUCT_HINT).isEmpty() )
                     hints.setAllowedEanExtensions(std::set<int>());
 
-                try {
-                    res = decoder->decode(bb, hints);
+                // try {
+                res = decoder->decode(bb, hints);
+#ifdef Q_OS_WASM
+                if (!res.isNull()) {
+#endif
                     processingTime = t.elapsed();
-                    lastDecodeOperationSucceded_ = true;
+                    //lastDecodeOperationSucceded_ = true;
                     break;
-                } catch(zxing::Exception &/*e*/) {
-                    //qDebug() << "Decoding phase 2, thorought scan: failed";
+#ifdef Q_OS_WASM
+                } else {
+                    //lastDecodeOperationSucceded_ = false;
                 }
+#endif
+                // } catch(zxing::Exception &e){
+                //     qDebug() << "Decoding phase 2, thorought scan: failed";
+                // }
             }
 
             if (!lastDecodeOperationSucceded_&& tryHarder_ && (tryHarderType & TryHarderBehaviour_Rotate) && bb->isRotateSupported()) {

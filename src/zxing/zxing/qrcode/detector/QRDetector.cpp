@@ -67,6 +67,11 @@ QSharedPointer<DetectorResult> Detector::detect(DecodeHints const& hints) {
   callback_ = hints.getResultPointCallback();
   FinderPatternFinder finder(image_, hints.getResultPointCallback());
   QSharedPointer<FinderPatternInfo> info(finder.find(hints));
+#ifdef Q_OS_WASM
+  if (info.isNull()) {
+      return QSharedPointer<DetectorResult>();
+  }
+#endif
   return processFinderPatternInfo(info);
 }
 
@@ -77,9 +82,18 @@ QSharedPointer<DetectorResult> Detector::processFinderPatternInfo(QSharedPointer
 
   float moduleSize = calculateModuleSize(topLeft, topRight, bottomLeft);
   if (moduleSize < 1.0f) {
+#ifdef Q_OS_WASM
+    return QSharedPointer<DetectorResult>();
+#else
     throw zxing::ReaderException("bad module size");
+#endif
   }
   int dimension = computeDimension(topLeft, topRight, bottomLeft, moduleSize);
+#ifdef Q_OS_WASM
+  if (dimension <= 0) {
+      return QSharedPointer<DetectorResult>();
+  }
+#endif
   QSharedPointer<Version>provisionalVersion = Version::getProvisionalVersionForDimension(dimension);
   int modulesBetweenFPCenters = provisionalVersion->getDimensionForVersion() - 7;
 
@@ -181,7 +195,11 @@ int Detector::computeDimension(QSharedPointer<ResultPoint> topLeft, QSharedPoint
   case 3:
     ostringstream s;
     s << "Bad dimension: " << dimension;
+#ifdef Q_OS_WASM
+    return -1; // сигнал ошибки
+#else
     throw zxing::ReaderException(s.str().c_str());
+#endif
   }
   return dimension;
 }
@@ -301,12 +319,20 @@ QSharedPointer<AlignmentPattern> Detector::findAlignmentInRegion(float overallEs
   int alignmentAreaLeftX = max(0, estAlignmentX - allowance);
   int alignmentAreaRightX = min((int)(image_->getWidth() - 1), estAlignmentX + allowance);
   if (alignmentAreaRightX - alignmentAreaLeftX < overallEstModuleSize * 3) {
+#ifdef Q_OS_WASM
+    return QSharedPointer<AlignmentPattern>();
+#else
     throw zxing::ReaderException("region too small to hold alignment pattern");
+#endif
   }
   int alignmentAreaTopY = max(0, estAlignmentY - allowance);
   int alignmentAreaBottomY = min((int)(image_->getHeight() - 1), estAlignmentY + allowance);
   if (alignmentAreaBottomY - alignmentAreaTopY < overallEstModuleSize * 3) {
+#ifdef Q_OS_WASM
+    return QSharedPointer<AlignmentPattern>();
+#else
     throw zxing::ReaderException("region too small to hold alignment pattern");
+#endif
   }
 
   AlignmentPatternFinder alignmentFinder(image_, alignmentAreaLeftX, alignmentAreaTopY, alignmentAreaRightX
