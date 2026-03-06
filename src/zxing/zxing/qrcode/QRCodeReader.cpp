@@ -35,8 +35,14 @@ namespace zxing {
         QSharedPointer<Result> QRCodeReader::decode(QSharedPointer<BinaryBitmap> image, DecodeHints hints) {
             Detector detector(image->getBlackMatrix());
             QSharedPointer<DetectorResult> detectorResult(detector.detect(hints));
+            if (detectorResult.isNull()) {
+                return QSharedPointer<Result>();
+            }
             QSharedPointer<std::vector<QSharedPointer<ResultPoint>> > points (detectorResult->getPoints());
             QSharedPointer<DecoderResult> decoderResult(decoder_.decode(detectorResult->getBits()));
+            if (decoderResult.isNull()) {
+                return QSharedPointer<Result>();
+            }
             QSharedPointer<Result> result(
                                new Result(decoderResult->getText(), decoderResult->getRawBytes(), points, BarcodeFormat::QR_CODE, decoderResult->charSet()));
             return result;

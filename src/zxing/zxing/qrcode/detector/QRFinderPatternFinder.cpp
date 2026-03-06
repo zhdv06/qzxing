@@ -620,7 +620,11 @@ QSharedPointer<FinderPatternInfo> FinderPatternFinder::find(DecodeHints const &h
 
   if (possibleCenters_.size() < 3)
   {
+#ifdef Q_OS_WASM
+    return QSharedPointer<FinderPatternInfo>();
+#else
     throw zxing::ReaderException("no possible centers found");
+#endif
   }
 
   vector<QSharedPointer<FinderPattern>> patternInfo = selectBestPatterns();
